@@ -633,7 +633,7 @@ class LLMApiPlayer(Player):
                         break
                     except cf.TimeoutError:
                         pass
-                    if elapsed >= 20:
+                    if elapsed >= 30:
                         logger.warning(
                             f"LLM API response timeout for {self.name} after 20 seconds - folding"
                         )

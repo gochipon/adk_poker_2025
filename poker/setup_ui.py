@@ -51,6 +51,7 @@ class SetupUI:
         self.agent_manager.set_ui_refresh_callback(self._refresh_agent_dropdowns)
         self.agent_manager.fetch_agents_from_server()
         self._init_setup_ui()
+        self._refresh_agent_dropdowns()
 
     def _init_setup_ui(self):
         """設定画面のUIコンポーネントを初期化"""
@@ -272,6 +273,8 @@ class SetupUI:
     def _on_player_type_changed(self, e, player_index):
         """プレイヤータイプが変更されたときの処理"""
         selected_type = e.control.value
+        print(f"DEBUG: Player type changed for CPU{player_index + 1}: {selected_type}")
+        
         model_dropdown = self.model_dropdowns[player_index]
         agent_dropdown = self.agent_dropdowns[player_index]
 
@@ -279,16 +282,19 @@ class SetupUI:
             # LLMが選択された場合、モデル選択を表示
             model_dropdown.visible = True
             agent_dropdown.visible = False
+            print(f"DEBUG: Showing model dropdown for CPU{player_index + 1}")
         elif selected_type == "llm_api":
             # Agent APIが選択された場合、Agent選択を表示
             model_dropdown.visible = False
             agent_dropdown.visible = True
+            print(f"DEBUG: Showing agent dropdown for CPU{player_index + 1}")
             # 接続テスト成功済みのAgentでオプションを更新
             self._update_agent_options(agent_dropdown, player_index + 1)
         else:
             # ランダムが選択された場合、両方を非表示
             model_dropdown.visible = False
             agent_dropdown.visible = False
+            print(f"DEBUG: Hiding dropdowns for CPU{player_index + 1}")
 
         if self.page:
             self.page.update()
@@ -311,29 +317,39 @@ class SetupUI:
 
     def _update_agent_options(self, agent_dropdown: ft.Dropdown, cpu_number: int):
         """接続テスト成功済みのAgentでドロップダウンのオプションを更新"""
+        print(f"DEBUG: Updating agent options for CPU{cpu_number}")
+        
+        # まず利用可能なAgentを取得
+        all_agents = self.agent_manager.get_available_agents()
+        print(f"DEBUG: All available agents: {all_agents}")
+        
         # テスト結果から成功したAgentを取得
         test_results = self.agent_manager.get_test_results()
+        print(f"DEBUG: Test results: {test_results}")
+        
         successful_agents = []
 
+        # テスト成功済みのAgentを優先
         for agent_id, result in test_results.items():
             if result.get("status") == "success":
                 # 成功したAgentを追加
                 agent_info = next(
                     (
                         agent
-                        for agent in self.agent_manager.get_available_agents()
+                        for agent in all_agents
                         if agent.get("id") == agent_id
                     ),
                     None,
                 )
                 if agent_info:
                     successful_agents.append(agent_info)
+                    print(f"DEBUG: Added successful agent: {agent_info}")
 
-        # 成功したAgentがない場合は、全てのAgentを確認
+        # 成功したAgentがない場合は、全てのAgentを表示
         if not successful_agents:
-            all_agents = self.agent_manager.get_available_agents()
             if all_agents:
                 successful_agents = all_agents
+                print(f"DEBUG: Using all agents: {successful_agents}")
             else:
                 # Agentが全く存在しない場合は「Not Found」オプションを追加
                 agent_dropdown.label = f"CPU{cpu_number}のAgent - Not Found"
@@ -342,6 +358,7 @@ class SetupUI:
                 ]
                 agent_dropdown.value = "not_found"
                 agent_dropdown.disabled = True
+                print(f"DEBUG: No agents found, setting not_found option")
                 return
 
         # ドロップダウンのオプションを更新
@@ -360,6 +377,9 @@ class SetupUI:
         # デフォルト値を設定（最初のAgentを選択）
         if agent_dropdown.options:
             agent_dropdown.value = agent_dropdown.options[0].key
+            print(f"DEBUG: Set default agent: {agent_dropdown.options[0].key}")
+        else:
+            print(f"DEBUG: No agent options available")
 
     def _refresh_agent_dropdowns(self):
         """Agent refresh後にすべてのAgent dropdownを更新"""

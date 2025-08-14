@@ -1429,6 +1429,43 @@ class GameUI:
 
             if self.page:
                 self.page.update()
+            
+            # HumanPlayerの自動選択（0.1秒後）
+            import threading
+            import time
+            
+            def auto_select_action():
+                time.sleep(0.1)
+                # 利用可能なアクションから自動選択
+                if available_actions:
+                    # 優先順位: チェック > コール > フォールド > レイズ > オールイン
+                    if "check" in available_actions:
+                        self.handle_action("check", 0)
+                    elif any(action.startswith("call") for action in available_actions):
+                        # 最初のコールアクションを選択
+                        for action in available_actions:
+                            if action.startswith("call"):
+                                amount = int(action.split("(")[1].split(")")[0])
+                                self.handle_action("call", amount)
+                                break
+                    elif "fold" in available_actions:
+                        self.handle_action("fold", 0)
+                    elif any(action.startswith("raise") for action in available_actions):
+                        # 最初のレイズアクションを選択（最低額で）
+                        for action in available_actions:
+                            if action.startswith("raise"):
+                                min_amount = int(action.split("min ")[1].split(")")[0])
+                                self.handle_action("raise", min_amount)
+                                break
+                    elif any(action.startswith("all-in") for action in available_actions):
+                        # 最初のオールインアクションを選択
+                        for action in available_actions:
+                            if action.startswith("all-in"):
+                                amount = int(action.split("(")[1].split(")")[0])
+                                self.handle_action("all_in", amount)
+                                break
+            
+            threading.Thread(target=auto_select_action, daemon=True).start()
 
     def _show_raise_dialog(self, min_amount: int):
         """レイズ額入力ダイアログを表示"""
@@ -1438,6 +1475,16 @@ class GameUI:
             self.raise_dialog.open = True
             if self.page:
                 self.page.update()
+            
+            # レイズダイアログの自動確定（0.1秒後）
+            import threading
+            import time
+            
+            def auto_confirm_raise():
+                time.sleep(0.1)
+                self._confirm_raise(None)
+            
+            threading.Thread(target=auto_confirm_raise, daemon=True).start()
 
     def _close_raise_dialog(self, e):
         """レイズダイアログを閉じる"""
@@ -1531,6 +1578,16 @@ class GameUI:
             # UIを更新
             if self.page:
                 self.page.update()
+            
+            # 自動的にボタンを押す（1秒後）
+            import threading
+            import time
+            
+            def auto_click():
+                time.sleep(1)
+                self._on_phase_transition_confirmed(None)
+            
+            threading.Thread(target=auto_click, daemon=True).start()
 
     def _on_phase_transition_confirmed(self, e):
         """フェーズ遷移が確認された際の処理"""
@@ -1659,6 +1716,16 @@ class GameUI:
             self.showdown_overlay_container.visible = True
             if self.page:
                 self.page.update()
+            
+            # 自動的にボタンを押す（1秒後）
+            import threading
+            import time
+            
+            def auto_click():
+                time.sleep(1)
+                self._on_showdown_continue_confirmed(None)
+            
+            threading.Thread(target=auto_click, daemon=True).start()
 
     def clear_showdown_results_inline(self):
         """ショーダウン結果のインライン表示をクリア"""

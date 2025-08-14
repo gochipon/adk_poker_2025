@@ -382,6 +382,16 @@ class PokerFletUI:
                 ft.TextButton("ゲーム終了", on_click=on_no),
             ],
         )
+        
+        # 自動的に「次のハンドへ」を押す（1秒後）
+        import threading
+        import time
+        
+        def auto_click():
+            time.sleep(1)
+            on_yes(None)
+        
+        threading.Thread(target=auto_click, daemon=True).start()
 
         with UI_UPDATE_LOCK:
             # 既存のダイアログをクリアしてから新しいダイアログを追加
