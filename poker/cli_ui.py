@@ -634,6 +634,31 @@ class PokerUI:
                             winnings_str = ", ".join(winner_winnings)
                             print(f"       勝者: {winners_str} ({winnings_str})")
 
+                        # サイドポット内訳の表示（存在すれば）
+                        side_pots = results.get("side_pots", [])
+                        if side_pots:
+                            print("       サイドポット内訳:")
+                            for sp in side_pots:
+                                idx = sp.get("index")
+                                amt = sp.get("amount")
+                                eligible_ids = sp.get("eligible", [])
+                                winners_ids = sp.get("winners", [])
+                                winner_payouts = sp.get("winner_payouts", [])
+
+                                # 名前解決
+                                def _name(pid):
+                                    p = self.game.get_player(pid)
+                                    return p.name if p else str(pid)
+
+                                eligible_names = ", ".join(_name(pid) for pid in eligible_ids)
+                                winners_names = ", ".join(_name(pid) for pid in winners_ids)
+                                payouts_str = ", ".join(
+                                    f"{_name(wp['player_id'])}: ${wp['amount']}" for wp in winner_payouts
+                                )
+                                print(
+                                    f"         - Pot#{idx}: ${amt} | Eligible: [{eligible_names}] | Winners: [{winners_names}] | 配当: {payouts_str}"
+                                )
+
                 # 5ハンドごとに中間結果表示
                 if hand_count % 5 == 0:
                     print(f"\n--- {hand_count}ハンド完了 ---")

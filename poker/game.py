@@ -7,6 +7,7 @@ import random
 import logging
 from typing import List, Dict, Any, Optional, Tuple
 from enum import Enum
+from collections import defaultdict
 
 from .game_models import Deck, GamePhase, GameState, PlayerInfo
 from .player_models import (
@@ -949,11 +950,14 @@ class PokerGame:
             return result
 
         # 複数プレイヤーでのショーダウン
+        # まず各プレイヤーのハンドを評価（1度だけ評価して使い回す）
         player_hands = []
+        evaluated_by_player_id: Dict[int, HandResult] = {}
         for player in remaining_players:
             hand_result = HandEvaluator.evaluate_hand(
                 player.hole_cards, self.community_cards
             )
+            evaluated_by_player_id[player.id] = hand_result
             player_hands.append({"player": player, "hand": hand_result})
 
         # 履歴: ショーダウン参加者のハンド情報を追記
@@ -983,59 +987,91 @@ class PokerGame:
         except Exception as e:
             game_logger.debug("Showdown logging (hands) failed: %s", e)
 
-        # ハンドの強さでソート（強い順）
-        player_hands.sort(
-            key=lambda x: (x["hand"].rank.value, x["hand"].kickers), reverse=True
-        )
+        # サイドポット（メイン含む）を構築
+        side_pots = self._build_side_pots()
 
-        # 勝者を決定（同じ強さの場合は分割）
-        best_hand = player_hands[0]["hand"]
-        winners = []
+        # 各ポットごとにeligibleなプレイヤーで勝者を決定し配当
+        winnings_by_player: Dict[int, int] = defaultdict(int)
+        side_pot_results: List[Dict[str, Any]] = []
 
-        for ph in player_hands:
-            if (
-                ph["hand"].rank == best_hand.rank
-                and ph["hand"].kickers == best_hand.kickers
-            ):
-                winners.append(ph["player"])
-            else:
-                break
+        for idx, pot in enumerate(side_pots):
+            amount: int = pot.get("amount", 0)
+            eligible: List[int] = list(pot.get("eligible", set()))
+            if amount <= 0 or not eligible:
+                continue
 
-        # ポットを分割
-        winnings_per_player = self.pot // len(winners)
-        remainder = self.pot % len(winners)
+            # eligibleプレイヤーの中でベストハンドを判定
+            ranked_ids = sorted(
+                eligible,
+                key=lambda pid: (
+                    evaluated_by_player_id[pid].rank.value,
+                    evaluated_by_player_id[pid].kickers,
+                ),
+                reverse=True,
+            )
+            best = evaluated_by_player_id[ranked_ids[0]]
+            winners_ids = [
+                pid
+                for pid in ranked_ids
+                if evaluated_by_player_id[pid].rank == best.rank
+                and evaluated_by_player_id[pid].kickers == best.kickers
+            ]
 
-        results = []
-        # サマリを履歴に追記
-        self.action_history.append(
-            "Showdown winners: "
-            + ", ".join(str(w.id) for w in winners)
-            + f" best_hand={str(best_hand)} pot={self.pot} split={winnings_per_player} remainder={remainder}"
-        )
-        for i, winner in enumerate(winners):
-            winnings = winnings_per_player
-            if i < remainder:  # 余りを最初の勝者から順に配布
-                winnings += 1
+            split, rem = divmod(amount, len(winners_ids))
+            winner_payouts: List[Dict[str, Any]] = []
+            for i, pid in enumerate(winners_ids):
+                payout = split + (1 if i < rem else 0)
+                winnings_by_player[pid] += payout
+                winner_payouts.append({"player_id": pid, "amount": payout})
 
-            winner.chips += winnings
-            results.append(
+            # サイドポット内訳を収集
+            side_pot_results.append(
                 {
-                    "player_id": winner.id,
-                    "hand": str(player_hands[0]["hand"]),
-                    "winnings": winnings,
+                    "index": idx,
+                    "amount": amount,
+                    "eligible": eligible,
+                    "winners": winners_ids,
+                    "split": split,
+                    "remainder": rem,
+                    "winner_payouts": winner_payouts,
                 }
             )
-            # 各勝者の配当の詳細行は履歴に追記しない
+
+            # アクション履歴にポット配当の概要を追加
+            try:
+                self.action_history.append(
+                    f"SidePot#{idx}: amount={amount} winners={winners_ids} split={split} remainder={rem}"
+                )
+            except Exception:
+                pass
+
+        # 実配当の反映と結果構築
+        results = []
+        winners_flat = [pid for pid, amt in winnings_by_player.items() if amt > 0]
+        try:
+            for pid, amount in winnings_by_player.items():
+                if amount <= 0:
+                    continue
+                player = self.get_player(pid)
+                if player is None:
+                    continue
+                player.chips += amount
+                results.append(
+                    {
+                        "player_id": pid,
+                        "hand": str(evaluated_by_player_id[pid]),
+                        "winnings": amount,
+                    }
+                )
+        except Exception as e:
+            game_logger.debug("Showdown payout application failed: %s", e)
 
         # 勝者と配当のログ
         try:
             game_logger.info(
-                "Showdown winners: %s best_hand=%s pot=%d split=%d remainder=%d",
-                [w.id for w in winners],
-                str(best_hand),
+                "Showdown payouts: %s (total pot=%d)",
+                {pid: amt for pid, amt in winnings_by_player.items() if amt > 0},
                 self.pot,
-                winnings_per_player,
-                remainder,
             )
             for r in results:
                 game_logger.info(
@@ -1049,7 +1085,7 @@ class PokerGame:
             game_logger.debug("Showdown logging (results) failed: %s", e)
 
         result = {
-            "winners": [w.id for w in winners],
+            "winners": winners_flat,
             "results": results,
             "all_hands": [
                 {
@@ -1059,9 +1095,59 @@ class PokerGame:
                 }
                 for ph in player_hands
             ],
+            "side_pots": side_pot_results,
+            "total_pot": self.pot,
         }
         self.last_showdown_results = result
         return result
+
+    def _build_side_pots(self) -> List[Dict[str, Any]]:
+        """現在のハンドの拠出情報からメインポット/サイドポットを構築して返す。
+
+        返却値は古い層（メインポット）から順の配列で、各要素は
+        {"amount": int, "eligible": set(player_id)} の辞書。
+        """
+        # 各プレイヤーの拠出額（ハンド内累計）をコピー
+        contributions: Dict[int, int] = {
+            p.id: int(getattr(p, "total_bet_this_hand", 0)) for p in self.players
+        }
+
+        # 勝利資格のあるプレイヤー（フォールドは除外）
+        in_hand_ids = {
+            p.id for p in self.players if p.status in [PlayerStatus.ACTIVE, PlayerStatus.ALL_IN]
+        }
+
+        side_pots: List[Dict[str, Any]] = []
+
+        # 残り拠出がある限り層を作る（in-hand に正の拠出がない時点で終了）
+        while True:
+            positive_in_hand = [
+                contributions[pid]
+                for pid in in_hand_ids
+                if contributions.get(pid, 0) > 0
+            ]
+            if not positive_in_hand:
+                break
+
+            cap = min(positive_in_hand)
+
+            # この層に拠出するプレイヤー（フォールド者も拠出していれば含む）
+            contributors = [pid for pid, c in contributions.items() if c > 0]
+            if not contributors:
+                break
+
+            amount = cap * len(contributors)
+            eligible = {pid for pid in contributors if pid in in_hand_ids}
+
+            # cap 分を全員から差し引く
+            for pid in contributors:
+                contributions[pid] = max(0, contributions[pid] - cap)
+
+            # 0額やeligibleなしのポットはスキップ
+            if amount > 0 and len(eligible) > 0:
+                side_pots.append({"amount": amount, "eligible": eligible})
+
+        return side_pots
 
     def is_game_over(self) -> bool:
         """ゲーム終了条件をチェック"""

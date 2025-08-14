@@ -1640,6 +1640,45 @@ class GameUI:
                     )
                     self._showdown_results_column.controls.append(winner_row)
 
+            # サイドポット内訳
+            side_pots = results.get("side_pots", [])
+            if side_pots:
+                self._showdown_results_column.controls.append(
+                    ft.Text("サイドポット内訳", size=12, weight=ft.FontWeight.W_600)
+                )
+                for sp in side_pots:
+                    idx = sp.get("index")
+                    amount = sp.get("amount", 0)
+                    eligible_ids = sp.get("eligible", [])
+                    winners_ids = sp.get("winners", [])
+                    winner_payouts = sp.get("winner_payouts", [])
+
+                    # 名前解決
+                    eligible_names = ", ".join(self._get_player_name(pid) for pid in eligible_ids)
+                    winners_names = ", ".join(self._get_player_name(pid) for pid in winners_ids)
+                    payouts_str = ", ".join(
+                        f"{self._get_player_name(wp.get('player_id'))}: ${wp.get('amount', 0)}"
+                        for wp in winner_payouts
+                    )
+
+                    row = ft.Column(
+                        [
+                            ft.Text(f"Pot#{idx}: ${amount}", size=12, weight=ft.FontWeight.BOLD),
+                            ft.Text(f"Eligible: [{eligible_names}]", size=11, color=ft.Colors.BLUE_GREY),
+                            ft.Text(f"Winners: [{winners_names}]", size=11, color=ft.Colors.BLUE_GREY),
+                            ft.Text(f"配当: {payouts_str}", size=11, color=ft.Colors.BLUE_GREY),
+                        ],
+                        spacing=2,
+                    )
+                    self._showdown_results_column.controls.append(row)
+
+            # 合計ポット
+            total_pot = results.get("total_pot")
+            if isinstance(total_pot, int):
+                self._showdown_results_column.controls.append(
+                    ft.Text(f"合計ポット: ${total_pot}", size=12, weight=ft.FontWeight.W_600)
+                )
+
             # 次のハンドへボタン
             next_button = ft.ElevatedButton(
                 text="次のハンドへ",
