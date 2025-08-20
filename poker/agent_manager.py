@@ -180,7 +180,7 @@ class AgentManager:
             on_click=self.test_all_agents,
             bgcolor=ft.Colors.GREEN_600,
             color=ft.Colors.WHITE,
-            width=150,
+            width=180,
             height=32,
             icon=ft.Icons.PLAY_ARROW,
         )
@@ -191,7 +191,7 @@ class AgentManager:
             on_click=self.refresh_agents,
             bgcolor=ft.Colors.ORANGE_600,
             color=ft.Colors.WHITE,
-            width=100,
+            width=120,
             height=32,
             icon=ft.Icons.REFRESH,
         )

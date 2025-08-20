@@ -211,9 +211,12 @@ class SetupUI:
                         on_click=self._start_game_with_settings,
                         bgcolor=ft.Colors.GREEN_600,
                         color=ft.Colors.WHITE,
-                        width=200,
+                        width=170,
                         height=40,
                         icon=ft.Icons.PLAY_ARROW,
+                        style=ft.ButtonStyle(
+                            text_style=ft.TextStyle(size=18, weight=ft.FontWeight.BOLD)
+                        ),
                     ),
                 ],
                 alignment=ft.MainAxisAlignment.CENTER,
