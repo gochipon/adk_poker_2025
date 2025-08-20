@@ -6,16 +6,6 @@ import flet as ft
 from typing import List, Dict, Any, Callable
 from .agent_manager import AgentManager
 
-# 利用可能なLLMモデル定義
-AVAILABLE_MODELS = [
-    {
-        "id": "gemini-2.5-flash-lite",
-        "name": "Gemini 2.5 Flash Lite",
-        "description": "高速・効率的",
-    },
-    {"id": "gemini-2.5-flash", "name": "Gemini 2.5 Flash", "description": "バランス型"},
-]
-
 
 class SetupUI:
     """設定画面UI管理クラス"""
@@ -31,7 +21,6 @@ class SetupUI:
         # UI コンポーネント
         self.setup_container = None
         self.cpu_type_dropdowns = []
-        self.model_dropdowns = []
         self.player_settings_column = None
 
         # Agent管理機能
@@ -56,7 +45,6 @@ class SetupUI:
         """設定画面のUIコンポーネントを初期化"""
         # CPUタイプ選択用のドロップダウン
         self.cpu_type_dropdowns = []
-        self.model_dropdowns = []
         self.agent_dropdowns = []  # Agent選択用のドロップダウンを追加
 
         # プレイヤー設定UIを作成（レスポンシブなグリッド表示）
@@ -97,29 +85,12 @@ class SetupUI:
                 expand=True,
                 options=[
                     ft.dropdown.Option("random", "ランダムプレイヤー"),
-                    ft.dropdown.Option("llm", "LLMプレイヤー(AI)"),
                     ft.dropdown.Option("llm_api", "Agent API プレイヤー"),
                 ],
                 value="random",
                 on_change=lambda e, idx=i - 1: self._on_player_type_changed(e, idx),
             )
             self.cpu_type_dropdowns.append(type_dropdown)
-
-            # モデル選択（最初は非表示）
-            model_dropdown = ft.Dropdown(
-                label=f"CPU{i}のモデル",
-                width=None,
-                expand=True,
-                options=[
-                    ft.dropdown.Option(
-                        model["id"], f"{model['name']} - {model['description']}"
-                    )
-                    for model in AVAILABLE_MODELS
-                ],
-                value="gemini-2.5-flash-lite",
-                visible=False,
-            )
-            self.model_dropdowns.append(model_dropdown)
 
             # Agent選択（最初は非表示）
             agent_dropdown = ft.Dropdown(
@@ -134,7 +105,7 @@ class SetupUI:
             # プレイヤー設定コンテナ
             player_container = ft.Container(
                 content=ft.Column(
-                    [type_dropdown, model_dropdown, agent_dropdown],
+                    [type_dropdown, agent_dropdown],
                     spacing=10,
                     expand=True,
                 ),
@@ -217,18 +188,8 @@ class SetupUI:
                                     size=12,
                                 ),
                                 ft.Text(
-                                    "• LLMプレイヤー(AI): Google ADKを使用した戦略的なAI",
+                                    "• Agent API プレイヤー: 外部Agent APIと連携して意思決定を行うAI",
                                     size=12,
-                                ),
-                                ft.Text(
-                                    "  - 複数のモデルから選択可能（Gemini 2.5 Flash Lite、Gemini 2.5 Flash等）",
-                                    size=11,
-                                    color=ft.Colors.BLUE_700,
-                                ),
-                                ft.Text(
-                                    "  - LLMプレイヤーを使用するにはGOOGLE_API_KEYが必要です",
-                                    size=10,
-                                    color=ft.Colors.GREY_600,
                                 ),
                                 ft.Text(
                                     "  - Agent接続テストでセッション作成・確認を実行します",
@@ -272,22 +233,15 @@ class SetupUI:
     def _on_player_type_changed(self, e, player_index):
         """プレイヤータイプが変更されたときの処理"""
         selected_type = e.control.value
-        model_dropdown = self.model_dropdowns[player_index]
         agent_dropdown = self.agent_dropdowns[player_index]
 
-        if selected_type == "llm":
-            # LLMが選択された場合、モデル選択を表示
-            model_dropdown.visible = True
-            agent_dropdown.visible = False
-        elif selected_type == "llm_api":
+        if selected_type == "llm_api":
             # Agent APIが選択された場合、Agent選択を表示
-            model_dropdown.visible = False
             agent_dropdown.visible = True
             # 接続テスト成功済みのAgentでオプションを更新
             self._update_agent_options(agent_dropdown, player_index + 1)
         else:
-            # ランダムが選択された場合、両方を非表示
-            model_dropdown.visible = False
+            # ランダムが選択された場合、Agent選択を非表示
             agent_dropdown.visible = False
 
         if self.page:
@@ -388,9 +342,7 @@ class SetupUI:
         cpu_needed = max(1, min(9, self.total_players - 1))
         for i, type_dropdown in enumerate(self.cpu_type_dropdowns[:cpu_needed]):
             config = {"type": type_dropdown.value}
-            if type_dropdown.value == "llm":
-                config["model"] = self.model_dropdowns[i].value
-            elif type_dropdown.value == "llm_api":
+            if type_dropdown.value == "llm_api":
                 agent_id = self.agent_dropdowns[i].value
                 if agent_id == "not_found":
                     # Agent が見つからない場合は、ランダムプレイヤーにフォールバック
