@@ -1608,7 +1608,7 @@ class GameUI:
                 self._showdown_results_column.controls.append(
                     ft.Row(
                         [
-                            self.create_card_widget_small(str(c))
+                            self.create_card_widget_history(str(c))
                             for c in community_cards
                         ],
                         spacing=4,
@@ -1632,7 +1632,7 @@ class GameUI:
                         [
                             ft.Text(player_name, size=12, weight=ft.FontWeight.BOLD),
                             ft.Row(
-                                [self.create_card_widget_small(c) for c in cards],
+                                [self.create_card_widget_history(c) for c in cards],
                                 spacing=4,
                             ),
                             ft.Text(hand_desc, size=11, color=ft.Colors.BLUE_GREY),
