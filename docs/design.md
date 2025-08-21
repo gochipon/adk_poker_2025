@@ -128,7 +128,6 @@ class Game:
     def distribute_pot(self) -> None
     def is_game_over(self) -> bool
     def save_game_state(self) -> None
-    def load_game_state(self) -> None
 ```
 
 ### 2.7 HandEvaluator クラス

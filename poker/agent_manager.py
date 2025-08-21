@@ -474,11 +474,6 @@ class AgentManager:
                             f"Agent file not found: {agent_info['path']}"
                         )
 
-                    # TODO: Context7 MCPを使った実際のテスト実装予定
-                    # - Agent モジュールのimport
-                    # - Agent インスタンスの生成
-                    # - 簡単な応答テスト
-
                     agent_card["status_icon"].name = ft.Icons.CHECK_CIRCLE
                     agent_card["status_icon"].color = ft.Colors.GREEN_500
                     agent_card["connection_info"].value = (

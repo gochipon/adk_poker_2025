@@ -1217,11 +1217,6 @@ class PokerGame:
         with open(filename, "w", encoding="utf-8") as f:
             json.dump(game_data, f, ensure_ascii=False, indent=2)
 
-    def load_game_state(self, filename: str):
-        """JSONファイルからゲーム状態を読み込み"""
-        # TODO: 実装（必要に応じて）
-        pass
-
     def _log_game_state(self, context: str, extra_info: str = ""):
         """現在のゲーム状態を詳細にログに記録"""
         active_players = [p for p in self.players if p.status == PlayerStatus.ACTIVE]
