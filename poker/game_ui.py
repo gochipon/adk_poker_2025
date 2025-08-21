@@ -520,6 +520,35 @@ class GameUI:
             rank_font_size=11,
         )
 
+    def create_card_widget_history(self, card_str: str) -> ft.Container:
+        """アクション履歴用のカード表示（やや縦長・マーク小さめ）"""
+        if not card_str or card_str == "??":
+            return ft.Container(
+                content=ft.Text("🂠", size=22),
+                width=40,
+                height=52,
+                bgcolor=ft.Colors.BLUE_100,
+                border=ft.border.all(1, ft.Colors.BLUE_300),
+                border_radius=5,
+                alignment=ft.alignment.center,
+            )
+
+        suit_symbol = card_str[-1]
+        rank_text = card_str[:-1]
+        color = ft.Colors.RED if suit_symbol in ["♥", "♦"] else ft.Colors.BLACK
+
+        # 履歴では中央マークを小さめ、全体高さは少し高めにして切れを防ぐ
+        return self._create_card_face(
+            rank_text,
+            suit_symbol,
+            color,
+            width=40,
+            height=52,
+            border_radius=5,
+            suit_font_size=14,
+            rank_font_size=11,
+        )
+
     def create_card_widget_medium(self, card_str: str) -> ft.Container:
         """自分用の少し大きめカード表示（座席用）"""
         if not card_str or card_str == "??":
@@ -987,7 +1016,8 @@ class GameUI:
                             "FLOP", ft.Colors.GREEN_200, ft.Colors.GREEN_900
                         ),
                         ft.Row(
-                            [self.create_card_widget_small(c) for c in cards], spacing=4
+                            [self.create_card_widget_history(c) for c in cards],
+                            spacing=4,
                         ),
                     ],
                     spacing=8,
@@ -1008,7 +1038,7 @@ class GameUI:
                         self._create_action_badge(
                             "TURN", ft.Colors.GREEN_200, ft.Colors.GREEN_900
                         ),
-                        self.create_card_widget_small(c),
+                        self.create_card_widget_history(c),
                     ],
                     spacing=8,
                 ),
@@ -1027,7 +1057,7 @@ class GameUI:
                         self._create_action_badge(
                             "RIVER", ft.Colors.GREEN_200, ft.Colors.GREEN_900
                         ),
-                        self.create_card_widget_small(c),
+                        self.create_card_widget_history(c),
                     ],
                     spacing=8,
                 ),
