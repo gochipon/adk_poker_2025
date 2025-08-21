@@ -1,34 +1,12 @@
 # ADK Poker - テキサスホールデム ポーカーゲーム
 
-LLMプレイヤー対応のWebアプリ（Flet）/CLIのテキサスホールデムポーカーです。観戦用Viewerやログビューワーも付属します。
-
-## 特徴
-
-- **UI**: デフォルトはWeb（Flet）。必要に応じてCLIも利用可
-- **観戦ビューア**: 別ポートでリアルタイム観戦（全員のホールカードを公開）
-- **LLM対応**: `docs/game_state_format.md`のJSON仕様でLLMプレイヤーと連携（インプロセス/外部APIの2方式）
-- **完全実装**: No-Limit、ハンド評価、ショーダウンまで実装
-- **デフォルト4人対戦**: 人間1 + CPU3（設定で変更可）
-- **CPU専用モード**: 全員CPUの自動進行（テスト・統計用途）
+LLMプレイヤー対応のWebアプリ（Flet）/CLIのテキサスホールデムポーカー
 
 ## ゲーム仕様
 
 - **形式**: テキサスホールデム（No-Limit）
 - **初期チップ**: 2000
 - **ブラインド**: SB 10 / BB 20
-
-### ハンドランキング（強い順）
-
-1. ロイヤルフラッシュ
-2. ストレートフラッシュ
-3. フォーカード
-4. フルハウス
-5. フラッシュ
-6. ストレート
-7. スリーカード
-8. ツーペア
-9. ワンペア
-10. ハイカード
 
 ## インストール・実行
 
@@ -39,44 +17,75 @@ LLMプレイヤー対応のWebアプリ（Flet）/CLIのテキサスホールデ
 
 ### セットアップ
 
-1. まず、リポジトリをforkしてください．
-2. 次にリポジトリをcloneしてください．
+1. uvのインストール
+
+[公式ドキュメントのインストール方法](https://docs.astral.sh/uv/getting-started/installation/)を参考にインストールしてください．
+
+- macOS/Linuxの場合
 
    ```bash
-   # フォークしたリポジトリをクローン
-   git clone <repository-url>
-   cd adk_porker_2025
+   curl -LsSf https://astral.sh/uv/install.sh | sh
    ```
 
-3. 次に、uvをインストールしてください
+- Windowsの場合
 
    ```bash
-   # uvが未インストールの場合
-   curl -LsSf https://astral.sh/uv/install.sh | sh
+   powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
+   ```
+
+2. リポジトリのクローン
+
+   ```bash
+   git clone https://github.com/gochipon/adk_porker_2025
+   cd adk-poker
+   ```
+
+3. 依存パッケージのインストール
+
+   ```bash
+   uv sync
    ```
 
 #### 環境変数の設定
 
-[.env.example](.env.example)を参考にして.envファイルをリポジトリルートに作成し、各チームに配布しているAPIキーを書き込んでください．
+- [.env.example](.env.example)を参考にして.envファイルをリポジトリルートに作成してください
+- 基本的には`GOOGLE_API_KEY`が設定されていれば、beginner_agentは動作します．
+- インターン生が作成したagents (team1-4)については`OPENAI_API_KEY`を設定してください．
 
-#### Webアプリモード（デフォルト・推奨）
+## 注意事項
+- ポーカーゲームを再起動する場合は、現在起動しているポーカーのタブを閉じてから実行してください
+  - viewerを実装している都合で、ゲームを複数同時に起動することはできません
 
-uv runでwebブラウザとagentを起動してください．
+## 使い方
+
+### Webアプリモード
+
+1. エージェントをadk api serverで起動
 
 ```bash
-# ブラウザでアクセス可能なWebアプリケーション（デフォルト）
-uv run python main.py
-# ブラウザで http://localhost:8551 にアクセス
-
-# エージェントの起動（エージェント専用モード使用時は必須）
 cd agents && uv run adk api_server --port 8000
 ```
+
+2. 新しいターミナルで以下のコマンドを実行
+
+```bash
+uv run python main.py
+# ブラウザで http://localhost:8551 にアクセス
+```
+
+3. 最初に表示される設定画面で、プレイヤー構成を選択
+    - プレイヤータイプ: `random` / `llm_api`
+      - `llm_api` の場合は利用するエージェント等を設定
+3. ゲーム開始後、画面下部のボタンでアクションを選択
+    - フォールド（赤）/ チェック（青）/ コール（緑）/ レイズ（オレンジ）/ オールイン（紫）
+    - レイズはダイアログで金額を入力
+4. ベッティングラウンド終了時は「次のフェーズへ」ボタンで進行
+5. ショーダウン結果はテーブル上に表示され、「次のハンドへ」で継続
 
 - **観戦ビューア同時起動**（別ウィンドウで自動起動）
 
   ```bash
-  uv run python main.py --with-viewer       # Viewer: http://localhost:8552
-  uv run python main.py --with-viewer --viewer-port 9000
+  uv run python main.py --with-viewer # Viewer: http://localhost:8552
   ```
 
 - **CLIモード**
@@ -85,15 +94,9 @@ cd agents && uv run adk api_server --port 8000
   uv run python main.py --cli
   ```
 
-- **CPU専用モード（CLI限定）**
-
-  ```bash
-  uv run python main.py --cli --cpu-only                      # 10ハンド、毎ハンド表示
-  uv run python main.py --cli --cpu-only --max-hands 20       # 20ハンド
-  uv run python main.py --cli --cpu-only --max-hands 100 --display-interval 10
-  ```
-
 - **エージェント専用モード（CLI限定）**
+  - プレイヤーを全てAgentにし、高速でゲームを進行するモードです。
+  - エージェントの性能評価などに使用できます。
 
   ```bash
   # デフォルト（team1_agent:2人, team2_agent:2人）
@@ -115,9 +118,6 @@ cd agents && uv run adk api_server --port 8000
   - ⚡ **完全自動進行**: 人間の介入なしで最大20ハンド実行
   - 🎯 **カスタム構成**: エージェントの種類と人数を自由に設定
   
-  **利用可能なエージェント:**
-  - `team1_agent`, `team2_agent`, `team3_agent`, `team4_agent`, `beginner_agent`
-  
   **⚠️ 注意:** LLMの実際の動作には適切なAPIキーの設定が必要です。未設定の場合はランダム行動になります。
 
 #### 利用可能なオプション
@@ -133,20 +133,7 @@ uv run python main.py --help
 - `--agent-only`: エージェント専用モード（LLMエージェントのみで完全自動進行、CLI限定）
 - `--agents <config>`: 使用するエージェントと人数を指定（例: "team1_agent:2,team2_agent:1"）
 - `--max-hands <N>`: CPU専用・エージェント専用モードの最大ハンド数（CPU専用:10、エージェント専用:20）
-- `--display-interval <N>`: 何ハンドおきに詳細表示するか（デフォルト: 1）
-- `--llm-mode`: 予約（現在未使用）
 
-## 使い方（Web）
-
-1. `uv run python main.py` を実行し、`http://localhost:8551` を開く
-2. 最初に表示される設定画面で、プレイヤー構成を選択
-   - プレイヤータイプ: `human` / `random` / `llm` / `llm_api`
-   - `llm` の場合はモデルを、`llm_api` の場合は利用するエージェント等を設定
-3. ゲーム開始後、画面下部のボタンでアクションを選択
-   - フォールド（赤）/ チェック（青）/ コール（緑）/ レイズ（オレンジ）/ オールイン（紫）
-   - レイズはダイアログで金額を入力
-4. ベッティングラウンド終了時は「次のフェーズへ」ボタンで進行
-5. ショーダウン結果はテーブル上に表示され、「次のハンドへ」で継続
 
 ## LLMプレイヤー
 
@@ -181,13 +168,7 @@ uv run python main.py --help
 }
 ```
 
-### LLMプレイヤーの実装方法
-
-1. `poker/models.py`の`LLMPlayer`クラスを拡張
-2. `make_decision()`メソッドでLLMクライアントと連携
-3. JSONフォーマットでゲーム状態を受け取り、構造化された決定を返す
-
-#### LLMプレイヤーの出力フォーマット
+### LLMプレイヤーの出力フォーマット
 
 LLMプレイヤーは、意思決定の際に**必ず次のJSON形式**で出力してください。
 
@@ -207,18 +188,6 @@ LLMプレイヤーは、意思決定の際に**必ず次のJSON形式**で出力
   - Setup画面でエージェント（例: `team1_agent`）を選択してください
   - Viewer に「LLMエージェントの最新判断」が表示されます
 
-### デバッグモード
-
-```bash
-# デバッグモード有効（ターミナルとファイル両方に出力）
-uv run python main.py --debug
-
-# CLI + デバッグモード
-uv run python main.py --cli --debug
-
-# CPU専用 + デバッグモード
-uv run python main.py --cpu-only --debug --max-hands 5
-```
 
 ## ログ出力
 
@@ -241,12 +210,6 @@ uv run python log_viewer.py --port 8554
 # ヘルプを表示
 uv run python log_viewer.py --help
 ```
-
-### 機能
-
-- **ログファイル選択**: 日時順でログファイルを一覧表示
-- **視覚的な表示**: アイコンと色分けで見やすく表示
-- **統計情報**: ハンド数、アクション数などの概要を表示
 
 ### 使い方
 
