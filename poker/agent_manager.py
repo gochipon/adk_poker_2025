@@ -111,6 +111,15 @@ class AgentManager:
                         )
                         continue
 
+                    # 表示要件: name を現在の description に置き換え、description は非表示（空）にする
+                    display_name = (
+                        parsed_agent.get("description")
+                        or parsed_agent.get("name")
+                        or parsed_agent.get("id")
+                    )
+                    parsed_agent["name"] = display_name
+                    parsed_agent["description"] = ""
+
                     parsed_agents.append(parsed_agent)
 
             elif isinstance(agents_data, dict):
@@ -148,6 +157,15 @@ class AgentManager:
                             "path": "",
                             "url": f"{self.agent_server_url}/{agent_id}",
                         }
+
+                    # 表示要件: name を現在の description に置き換え、description は非表示（空）にする
+                    display_name = (
+                        parsed_agent.get("description")
+                        or parsed_agent.get("name")
+                        or parsed_agent.get("id")
+                    )
+                    parsed_agent["name"] = display_name
+                    parsed_agent["description"] = ""
 
                     parsed_agents.append(parsed_agent)
             else:
@@ -301,11 +319,6 @@ class AgentManager:
                         size=13,
                         weight=ft.FontWeight.BOLD,
                         color=ft.Colors.BLACK87,
-                    ),
-                    ft.Text(
-                        agent.get("description", "説明なし"),
-                        size=10,
-                        color=ft.Colors.GREY_600,
                     ),
                     connection_info,  # 接続情報を追加
                 ],

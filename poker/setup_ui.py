@@ -306,7 +306,7 @@ class SetupUI:
         agent_dropdown.options = [
             ft.dropdown.Option(
                 agent.get("id", "unknown"),
-                f"{agent.get('name', 'Unknown')} - {agent.get('description', 'No description')}",
+                agent.get("name", "Unknown"),
             )
             for agent in successful_agents
         ]
