@@ -608,6 +608,8 @@ class GameUI:
 
             is_current_turn = player.id == self.game.current_player_index
             is_you = player.id == self.current_player_id
+            # 表示名（LLM APIプレイヤーは app_name を優先して表示）
+            display_name = self._get_display_name(player)
 
             # カード（自分だけ公開、他は裏）
             seat_cards = []
@@ -684,7 +686,7 @@ class GameUI:
                         ft.Row(
                             [
                                 ft.Text(
-                                    player.name,
+                                    display_name,
                                     size=12,
                                     weight=ft.FontWeight.BOLD,
                                     color=(
@@ -821,9 +823,27 @@ class GameUI:
 
         return seat_controls
 
+    def _get_display_name(self, player: Player) -> str:
+        """UI表示用のプレイヤー名を返す。
+
+        - LLM API プレイヤー: `app_name` を人が読みやすい形に整形して表示
+        - それ以外: `player.name` をそのまま表示
+        """
+        try:
+            if player is None:
+                return ""
+            # LLM API プレイヤーは app_name 属性を持つ
+            if hasattr(player, "app_name") and getattr(player, "app_name", None):
+                app_name = str(getattr(player, "app_name"))
+                cleaned = app_name.replace("_", " ").strip()
+                return cleaned.title() if cleaned else app_name
+            return player.name
+        except Exception:
+            return getattr(player, "name", "Player")
+
     def _get_player_name(self, player_id: int) -> str:
         player = self.game.get_player(player_id) if self.game else None
-        return player.name if player else f"Player {player_id}"
+        return self._get_display_name(player) if player else f"Player {player_id}"
 
     def _create_amount_badge(self, amount: int, color_bg, color_fg) -> ft.Container:
         return ft.Container(
@@ -1385,9 +1405,8 @@ class GameUI:
             if current_player.id != self.current_player_id or not isinstance(
                 current_player, HumanPlayer
             ):
-                self.status_text.value = (
-                    f"{current_player.name} のターンです（AIプレイヤー）"
-                )
+                # 表示名に置き換え（LLM APIプレイヤーは app_name ベース）
+                self.status_text.value = f"{self._get_display_name(current_player)} のターンです（AIプレイヤー）"
                 self.status_text.color = ft.Colors.ORANGE
                 if self.page:
                     self.page.update()
@@ -1745,7 +1764,9 @@ class GameUI:
                                     "🏆 WINNER", size=14, weight=ft.FontWeight.BOLD
                                 ),
                                 ft.Text(
-                                    winner.name, size=14, weight=ft.FontWeight.BOLD
+                                    self._get_display_name(winner),
+                                    size=14,
+                                    weight=ft.FontWeight.BOLD,
                                 ),
                                 self._create_amount_badge(
                                     winner.chips,
@@ -1773,7 +1794,7 @@ class GameUI:
                     row = ft.Row(
                         [
                             ft.Text(f"#{rank}", size=12, weight=ft.FontWeight.BOLD),
-                            ft.Text(p.name, size=12),
+                            ft.Text(self._get_display_name(p), size=12),
                             self._create_amount_badge(
                                 p.chips, ft.Colors.GREY_50, ft.Colors.GREY_800
                             ),
