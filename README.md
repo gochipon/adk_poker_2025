@@ -201,7 +201,6 @@ LLMプレイヤーは、意思決定の際に**必ず次のJSON形式**で出力
 ### 起動方法
 
 ```bash
-# 基本的な起動（ブラウザで http://localhost:8553 にアクセス）
 uv run python log_viewer.py
 
 # ポート番号を指定して起動
