@@ -137,6 +137,10 @@ uv run python main.py --help
 
 ## LLMプレイヤー
 
+### ADKを用いたエージェントの作成手順
+- エージェントの作成手順は[wiki](https://github.com/gochipon/adk_porker_2025/wiki)を参照してください
+
+
 ### JSON状態フォーマット
 
 `docs/game_state_format.md`で定義された構造化フォーマットでゲーム状態を提供：
