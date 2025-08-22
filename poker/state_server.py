@@ -30,6 +30,22 @@ def _build_viewer_state() -> Dict[str, Any]:
     if not game:
         return {"ready": False}
 
+    def _display_name_for_player(p) -> str:
+        """Return a UI display name for viewer.
+
+        - For LLM API players, prefer app_name transformed (underscores -> spaces, title-case)
+        - Otherwise, use p.name
+        """
+        try:
+            if isinstance(p, LLMApiPlayer):
+                app = str(getattr(p, "app_name", "") or "")
+                if app:
+                    cleaned = app.replace("_", " ").strip()
+                    return cleaned.title() if cleaned else p.name
+        except Exception:
+            pass
+        return getattr(p, "name", "Player")
+
     def _latest_action_for_player(player_id: int) -> Tuple[str, int]:
         """Parse the game's action_history to find the latest action by player.
 
@@ -70,6 +86,8 @@ def _build_viewer_state() -> Dict[str, Any]:
             {
                 "id": p.id,
                 "name": p.name,
+                "display_name": _display_name_for_player(p),
+                "app_name": getattr(p, "app_name", None),
                 "chips": p.chips,
                 "current_bet": p.current_bet,
                 "total_bet_this_hand": p.total_bet_this_hand,
@@ -89,6 +107,8 @@ def _build_viewer_state() -> Dict[str, Any]:
                 {
                     "id": p.id,
                     "name": p.name,
+                    "display_name": _display_name_for_player(p),
+                    "app_name": getattr(p, "app_name", None),
                     "action": action,
                     "amount": amount,
                     "reasoning": reasoning,

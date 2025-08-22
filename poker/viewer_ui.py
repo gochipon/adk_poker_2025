@@ -227,7 +227,9 @@ class PokerViewerUI:
         for p in state.get("players", []):
             try:
                 if int(p.get("id")) == int(player_id):
-                    return str(p.get("name", f"Player {player_id}"))
+                    # Prefer display_name (built from app_name for LLM API players)
+                    name = p.get("display_name") or p.get("name")
+                    return str(name if name else f"Player {player_id}")
             except Exception:
                 continue
         return f"Player {player_id}"
@@ -517,7 +519,9 @@ class PokerViewerUI:
         )
 
     def _create_llm_agent_card(self, agent: dict) -> ft.Container:
-        name = str(agent.get("name", "Agent"))
+        # Prefer display_name if provided by state server
+        raw_name = agent.get("display_name") or agent.get("name") or "Agent"
+        name = str(raw_name)
         action = str(agent.get("action", "")).lower()
         amount = int(agent.get("amount", 0) or 0)
         reasoning = str(agent.get("reasoning", "")).strip()
@@ -924,7 +928,8 @@ class PokerViewerUI:
                         ft.Row(
                             [
                                 ft.Text(
-                                    player.get("name", f"P{i}"),
+                                    player.get("display_name")
+                                    or player.get("name", f"P{i}"),
                                     size=12,
                                     weight=ft.FontWeight.BOLD,
                                     color=(
