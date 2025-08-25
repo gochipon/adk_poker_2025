@@ -111,6 +111,15 @@ class AgentManager:
                         )
                         continue
 
+                    # 表示要件: name を現在の description に置き換え、description は非表示（空）にする
+                    display_name = (
+                        parsed_agent.get("description")
+                        or parsed_agent.get("name")
+                        or parsed_agent.get("id")
+                    )
+                    parsed_agent["name"] = display_name
+                    parsed_agent["description"] = ""
+
                     parsed_agents.append(parsed_agent)
 
             elif isinstance(agents_data, dict):
@@ -149,6 +158,15 @@ class AgentManager:
                             "url": f"{self.agent_server_url}/{agent_id}",
                         }
 
+                    # 表示要件: name を現在の description に置き換え、description は非表示（空）にする
+                    display_name = (
+                        parsed_agent.get("description")
+                        or parsed_agent.get("name")
+                        or parsed_agent.get("id")
+                    )
+                    parsed_agent["name"] = display_name
+                    parsed_agent["description"] = ""
+
                     parsed_agents.append(parsed_agent)
             else:
                 print(f"DEBUG: Unknown agents_data format: {type(agents_data)}")
@@ -180,7 +198,7 @@ class AgentManager:
             on_click=self.test_all_agents,
             bgcolor=ft.Colors.GREEN_600,
             color=ft.Colors.WHITE,
-            width=150,
+            width=180,
             height=32,
             icon=ft.Icons.PLAY_ARROW,
         )
@@ -191,7 +209,7 @@ class AgentManager:
             on_click=self.refresh_agents,
             bgcolor=ft.Colors.ORANGE_600,
             color=ft.Colors.WHITE,
-            width=100,
+            width=120,
             height=32,
             icon=ft.Icons.REFRESH,
         )
@@ -301,11 +319,6 @@ class AgentManager:
                         size=13,
                         weight=ft.FontWeight.BOLD,
                         color=ft.Colors.BLACK87,
-                    ),
-                    ft.Text(
-                        agent.get("description", "説明なし"),
-                        size=10,
-                        color=ft.Colors.GREY_600,
                     ),
                     connection_info,  # 接続情報を追加
                 ],
@@ -473,11 +486,6 @@ class AgentManager:
                         raise FileNotFoundError(
                             f"Agent file not found: {agent_info['path']}"
                         )
-
-                    # TODO: Context7 MCPを使った実際のテスト実装予定
-                    # - Agent モジュールのimport
-                    # - Agent インスタンスの生成
-                    # - 簡単な応答テスト
 
                     agent_card["status_icon"].name = ft.Icons.CHECK_CIRCLE
                     agent_card["status_icon"].color = ft.Colors.GREEN_500

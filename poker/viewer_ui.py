@@ -69,13 +69,22 @@ class PokerViewerUI:
                     no_wrap=True,
                     max_lines=1,
                     overflow=ft.TextOverflow.CLIP,
+                    style=ft.TextStyle(height=1.0),
                 )
             ],
             alignment=ft.MainAxisAlignment.START,
         )
 
-        # スート記号のフォントサイズは固定して視覚の一貫性を保つ
-        adjusted_suit_font_size = suit_font_size
+        # 中央エリアに収まるようにスートサイズを調整（Webとネイティブでのフォント差異に対応）
+        vertical_padding = 4  # top + bottom
+        available_middle_height = max(
+            0, height - (2 * rank_row_height) - vertical_padding
+        )
+        available_middle_width = max(0, width - 8)  # left + right padding
+        adjusted_suit_font_size = min(
+            suit_font_size,
+            max(8, min(available_middle_height, available_middle_width)),
+        )
 
         center_suit = ft.Container(
             content=ft.Text(
@@ -83,6 +92,10 @@ class PokerViewerUI:
                 size=adjusted_suit_font_size,
                 weight=ft.FontWeight.BOLD,
                 color=color,
+                no_wrap=True,
+                max_lines=1,
+                overflow=ft.TextOverflow.CLIP,
+                style=ft.TextStyle(height=1.0),
             ),
             alignment=ft.alignment.center,
             expand=True,
@@ -98,6 +111,7 @@ class PokerViewerUI:
                     no_wrap=True,
                     max_lines=1,
                     overflow=ft.TextOverflow.CLIP,
+                    style=ft.TextStyle(height=1.0),
                 )
             ],
             alignment=ft.MainAxisAlignment.END,
@@ -147,6 +161,59 @@ class PokerViewerUI:
             rank_font_size=11,
         )
 
+    # Match card sizes with game_ui.py
+    def create_card_widget(self, card_str: str) -> ft.Container:
+        if not card_str or card_str == "??":
+            return ft.Container(
+                content=ft.Text("🂠", size=28),
+                width=45,
+                height=60,
+                bgcolor=ft.Colors.BLUE_100,
+                border=ft.border.all(1, ft.Colors.BLUE_300),
+                border_radius=6,
+                alignment=ft.alignment.center,
+            )
+
+        rank_text = card_str[:-1]
+        suit_symbol = card_str[-1]
+        color = ft.Colors.RED if suit_symbol in ["♥", "♦"] else ft.Colors.BLACK
+        return self._create_card_face(
+            rank_text,
+            suit_symbol,
+            color,
+            width=45,
+            height=60,
+            border_radius=6,
+            suit_font_size=20,
+            rank_font_size=13,
+        )
+
+    def create_card_widget_history(self, card_str: str) -> ft.Container:
+        if not card_str or card_str == "??":
+            return ft.Container(
+                content=ft.Text("🂠", size=22),
+                width=40,
+                height=52,
+                bgcolor=ft.Colors.BLUE_100,
+                border=ft.border.all(1, ft.Colors.BLUE_300),
+                border_radius=5,
+                alignment=ft.alignment.center,
+            )
+
+        rank_text = card_str[:-1]
+        suit_symbol = card_str[-1]
+        color = ft.Colors.RED if suit_symbol in ["♥", "♦"] else ft.Colors.BLACK
+        return self._create_card_face(
+            rank_text,
+            suit_symbol,
+            color,
+            width=40,
+            height=52,
+            border_radius=5,
+            suit_font_size=14,
+            rank_font_size=11,
+        )
+
     def _create_badge(self, text: str, bg_color, fg_color) -> ft.Container:
         return ft.Container(
             content=ft.Text(text, size=10, weight=ft.FontWeight.BOLD, color=fg_color),
@@ -160,7 +227,9 @@ class PokerViewerUI:
         for p in state.get("players", []):
             try:
                 if int(p.get("id")) == int(player_id):
-                    return str(p.get("name", f"Player {player_id}"))
+                    # Prefer display_name (built from app_name for LLM API players)
+                    name = p.get("display_name") or p.get("name")
+                    return str(name if name else f"Player {player_id}")
             except Exception:
                 continue
         return f"Player {player_id}"
@@ -385,7 +454,10 @@ class PokerViewerUI:
                         self._create_action_badge(
                             "FLOP", ft.Colors.GREEN_200, ft.Colors.GREEN_900
                         ),
-                        ft.Row([self._create_card_small(c) for c in cards], spacing=4),
+                        ft.Row(
+                            [self.create_card_widget_history(c) for c in cards],
+                            spacing=4,
+                        ),
                     ],
                     spacing=8,
                     vertical_alignment=ft.CrossAxisAlignment.CENTER,
@@ -406,7 +478,7 @@ class PokerViewerUI:
                         self._create_action_badge(
                             "TURN", ft.Colors.GREEN_200, ft.Colors.GREEN_900
                         ),
-                        self._create_card_small(c),
+                        self.create_card_widget_history(c),
                     ],
                     spacing=8,
                 ),
@@ -426,7 +498,7 @@ class PokerViewerUI:
                         self._create_action_badge(
                             "RIVER", ft.Colors.GREEN_200, ft.Colors.GREEN_900
                         ),
-                        self._create_card_small(c),
+                        self.create_card_widget_history(c),
                     ],
                     spacing=8,
                 ),
@@ -447,7 +519,9 @@ class PokerViewerUI:
         )
 
     def _create_llm_agent_card(self, agent: dict) -> ft.Container:
-        name = str(agent.get("name", "Agent"))
+        # Prefer display_name if provided by state server
+        raw_name = agent.get("display_name") or agent.get("name") or "Agent"
+        name = str(raw_name)
         action = str(agent.get("action", "")).lower()
         amount = int(agent.get("amount", 0) or 0)
         reasoning = str(agent.get("reasoning", "")).strip()
@@ -854,7 +928,8 @@ class PokerViewerUI:
                         ft.Row(
                             [
                                 ft.Text(
-                                    player.get("name", f"P{i}"),
+                                    player.get("display_name")
+                                    or player.get("name", f"P{i}"),
                                     size=12,
                                     weight=ft.FontWeight.BOLD,
                                     color=(
@@ -1006,7 +1081,7 @@ class PokerViewerUI:
         if community:
             for card in community:
                 self.community_cards_row.controls.append(
-                    self._create_card_small(str(card))
+                    self.create_card_widget(str(card))
                 )
         else:
             self.community_cards_row.controls.append(
@@ -1096,7 +1171,7 @@ class PokerViewerUI:
             )
             self._showdown_results_column.controls.append(
                 ft.Row(
-                    [self._create_card_small(str(c)) for c in community],
+                    [self.create_card_widget_history(str(c)) for c in community],
                     spacing=4,
                     alignment=ft.MainAxisAlignment.CENTER,
                 )
