@@ -3,7 +3,7 @@
 ## 1. プロジェクト構造
 
 ```
-adk-porker/
+adk-poker/
 ├── docs/
 │   ├── requirements.md
 │   └── design.md
